@@ -1,0 +1,420 @@
+diff --git a/executor/src/main/resources/stdlib.raw b/executor/src/main/resources/stdlib.raw
+index 39942b1..910dca2 100644
+--- a/executor/src/main/resources/stdlib.raw
++++ b/executor/src/main/resources/stdlib.raw
+@@ -80,3 +80,251 @@ DECLARE SCALA FUNCTION substr(str: STRING, begin: INT, length: INT) RETURNS STRI
+     str.substring(begin - 1, end)
+ $$$
+ 
++DECLARE SCALA FUNCTION squareRoot(f: DOUBLE) RETURNS FLOAT $$$
++    math.sqrt(f).toFloat
++$$$
++
++DECLARE SCALA FUNCTION rotate2D(data: COLLECTION(COLLECTION(FLOAT))) RETURNS COLLECTION(COLLECTION(FLOAT)) $$$
++    var ll = List[List[Float]]()
++    for( i <- data(0).reverse) {
++        var l = List[Float](i)
++        ll = ll :+ l
++    }
++
++    for( j <- 1 until data.size ) {
++        var ll2 = List[List[Float]]()
++        var k = 0;
++        for(i <- data(j).reverse) {
++            var l = ll(k)
++            l = l :+ i
++            ll2 = ll2 :+ l
++            k = k+1
++        }
++        ll = ll2
++    }
++    ll
++$$$
++
++DECLARE PYTHON FUNCTION zip(m: COLLECTION(COLLECTION(COLLECTION(INT))), a: COLLECTION(COLLECTION(COLLECTION(FLOAT)))) RETURNS COLLECTION(COLLECTION(COLLECTION(RECORD(r: INT, v:FLOAT)))) AS $$$
++    return [[[dict(\
++            r=z,\
++            v=a[n1][n2][n3])\
++        for n3, z in enumerate(y)] \
++            for n2, y in enumerate(x)] \
++                for n1, x in enumerate(m)]
++$$$
++
++DECLARE PYTHON FUNCTION setRange(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))), l: FLOAT, u:FLOAT)
++    RETURNS COLLECTION(COLLECTION(COLLECTION(FLOAT))) AS $$$
++    return [ [ [ l if z < l else u if z > u else z for z in y ] for y in x ] for x in a ]
++$$$
++
++DECLARE PYTHON FUNCTION ijk(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))))
++    RETURNS COLLECTION(COLLECTION(COLLECTION(RECORD(i:INT,j:INT,k:INT,value:FLOAT)))) AS $$$
++    return [[[dict(i=n1,j=n2,k=n3,value=z) \
++        for n3, z in enumerate(y)] \
++            for n2, y in enumerate(x)] \
++                for n1, x in enumerate(a)]
++$$$
++
++DECLARE PYTHON FUNCTION xyz_m1(p:COLLECTION(FLOAT), a: COLLECTION(COLLECTION(COLLECTION(FLOAT))))
++    RETURNS COLLECTION(COLLECTION(COLLECTION(RECORD(x:FLOAT,y:FLOAT,z:FLOAT,value:FLOAT)))) AS $$$
++    return [[[dict(x=n1*p[1],y=n2*p[2],z=n3*p[3],value=z) \
++        for n3, z in enumerate(y)] \
++            for n2, y in enumerate(x)] \
++                for n1, x in enumerate(a)]
++$$$
++
++DECLARE PYTHON FUNCTION xyz_m1_v2(p:COLLECTION(FLOAT), a: COLLECTION(COLLECTION(COLLECTION(FLOAT))))
++    RETURNS COLLECTION(RECORD(x:FLOAT,y:FLOAT,z:FLOAT,value:FLOAT)) AS $$$
++    return [[[dict(x=n1*p[1],y=n2*p[2],z=n3*p[3],value=z) \
++        for n3, z in enumerate(y)] \
++            for n2, y in enumerate(x)] \
++                for n1, x in enumerate(a)]
++$$$
++
++DECLARE PYTHON FUNCTION xyz_m2(quaterns:COLLECTION(FLOAT), qfac: INT, pixdim:COLLECTION(FLOAT), qoffsets:COLLECTION(FLOAT), data: COLLECTION(COLLECTION(COLLECTION(FLOAT))))
++    RETURNS COLLECTION(COLLECTION(COLLECTION(RECORD(x:FLOAT,y:FLOAT,z:FLOAT,value:FLOAT)))) AS $$$
++    b=quaterns[0]
++    c=quaterns[1]
++    d=quaterns[2]
++    a=1-b*b-c*c-d*d
++    r11=a*a+b*b-c*c-d*d
++    r12=2*(b*c-a*d)
++    r13=2*(b*d+a*c)
++    r21=2*(b*c+a*d)
++    r22=a*a+c*c-b*b-d*d
++    r23=2*(c*d-a*b)
++    r31=2*(b*d-a*c)
++    r32=2*(c*d+a*b)
++    r33=a*a+d*d-b*b-c*c
++    return [[[dict(\
++                x=r11*pixdim[1]*n1+r12*pixdim[2]*n2+r13*pixdim[3]*n3+qoffsets[0],\
++                y=r21*pixdim[1]*n1+r22*pixdim[2]*n2+r23*pixdim[3]*n3+qoffsets[1],\
++                z=r31*pixdim[1]*n1+r32*pixdim[2]*n2+r33*pixdim[3]*n3+qoffsets[2],\
++                value=z) \
++        for n3, z in enumerate(y)] \
++            for n2, y in enumerate(x)] \
++                for n1, x in enumerate(data)]
++$$$
++
++DECLARE PYTHON FUNCTION xyz_m3(srow_x:COLLECTION(FLOAT), srow_y:COLLECTION(FLOAT), srow_z:COLLECTION(FLOAT), a: COLLECTION(COLLECTION(COLLECTION(FLOAT))))
++    RETURNS COLLECTION(COLLECTION(COLLECTION(RECORD(x:FLOAT,y:FLOAT,z:FLOAT,value:FLOAT)))) AS $$$
++    return [[[dict(\
++                x=srow_x[0]*n1+srow_x[1]*n2+srow_x[2]*n3+srow_x[3],\
++                y=srow_y[0]*n1+srow_y[1]*n2+srow_y[2]*n3+srow_y[3],\
++                z=srow_z[0]*n1+srow_z[1]*n2+srow_z[2]*n3+srow_z[3],\
++                value=z) \
++        for n3, z in enumerate(y)] \
++            for n2, y in enumerate(x)] \
++                for n1, x in enumerate(a)]
++$$$
++
++DECLARE PYTHON FUNCTION crop3D(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))), x: INT, width: INT, y:INT, height:INT, z:INT, depth:INT) RETURNS
++    COLLECTION(COLLECTION(COLLECTION(FLOAT))) AS $$$
++    xMin = x
++    xMax = x+width-1
++    yMin = y
++    yMax = y+height-1
++    zMin = z
++    zMax = z+depth-1
++    l1 = []
++    for n1,x in enumerate(a):
++        if n1 < xMin:
++            continue
++        if n1 > xMax:
++            break
++        l2 = []
++        for n2,y in enumerate(x):
++            if n2 < yMin:
++                continue
++            if n2 > yMax:
++                break
++            l3 = []
++            for n3,z in enumerate(y):
++                if n3 < zMin:
++                    continue
++                if n3 > zMax:
++                    break
++                l3.append(z)
++            l2.append(l3)
++        l1.append(l2)
++    return l1
++$$$
++
++DECLARE PYTHON FUNCTION crop2D(a: COLLECTION(COLLECTION(FLOAT)), x: INT, width: INT, y:INT, height:INT) RETURNS
++    COLLECTION(COLLECTION(FLOAT)) AS $$$
++    yMin = x
++    yMax = x+width-1
++    xMin = y
++    xMax = y+height-1
++    l1 = []
++    for n1,x in enumerate(a):
++        if n1 < xMin:
++            continue
++        if n1 > xMax:
++            break
++        l2 = []
++        for n2,y in enumerate(x):
++            if n2 < yMin:
++                continue
++            if n2 > yMax:
++                break
++            l2.append(y)
++        l1.append(l2)
++    return l1
++$$$
++
++DECLARE PYTHON FUNCTION index3d(a: COLLECTION(COLLECTION(COLLECTION(FLOAT)))) RETURNS
++    COLLECTION(RECORD(index: INT, value: COLLECTION(RECORD(index: INT, value: COLLECTION(RECORD(index: INT, value: FLOAT)))))) AS $$$
++    l1 = []
++    for n1,x in enumerate(a):
++        l2 = []
++        for n2,y in enumerate(x):
++            l3 = []
++            for n3,z in enumerate(y):
++                l3.append(dict(index=n3, value=z))
++            l2.append(dict(index=n2, value=l3))
++        l1.append(dict(index=n1, value=l2))
++    return l1
++$$$
++
++DECLARE PYTHON FUNCTION slicex(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))), n: INT)
++    RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    return a[n]
++$$$
++
++DECLARE PYTHON FUNCTION slicey(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))), n: INT)
++    RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    return [x[n] for x in a]
++$$$
++
++DECLARE PYTHON FUNCTION slicez(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))), n: INT)
++        RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    return [[y[n] for y in x] for x in a]
++$$$
++
++DECLARE PYTHON FUNCTION crop2d_strangeOutput(a: COLLECTION(COLLECTION(FLOAT)), x: INT, y: INT, width: INT, length: INT)
++        RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    return [l[y: y + length] for l in a[x: x + width]]
++$$$
++
++DECLARE PYTHON FUNCTION crop3d_strangeOutput(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))),
++                                x: INT, y: INT, z: INT,
++                                width: INT, length: INT, height: INT)
++        RETURNS COLLECTION(COLLECTION(COLLECTION(FLOAT))) AS $$$
++    return [[l2[z: z + height] for l2 in l1[y: y + length]] for l1 in a[x: x + width]]
++$$$
++
++DECLARE PYTHON FUNCTION transpose2d(a: COLLECTION(COLLECTION(FLOAT)))
++        RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    return [list(x) for x in zip(*a)]
++$$$
++
++DECLARE PYTHON FUNCTION transpose3d(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))))
++        RETURNS COLLECTION(COLLECTION(COLLECTION(FLOAT))) AS $$$
++    return [list(x) for x in zip(*a)]
++$$$
++
++DECLARE PYTHON FUNCTION rotate(a: COLLECTION(COLLECTION(FLOAT)))
++        RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    return a
++$$$
++
++DECLARE PYTHON FUNCTION sliceplane(a: COLLECTION(COLLECTION(COLLECTION(FLOAT))),
++                                px: INT, py: INT, pz: INT,
++                                nx: INT, ny: INT, nz: INT)
++        RETURNS COLLECTION(COLLECTION(FLOAT)) AS $$$
++    # the formula is nx*(x-px) + ny*(y-py) + nz*(z-pz) = 0
++    # which translates to
++    # z = nx*px/nz + ny*py/nz + pz - nx*x/nz -ny*y/nz
++    if nx == 0 and ny ==0 and nz == 0:
++        raise ArgumentError("Normal vector cannot be 0")
++
++    if nz != 0:
++        ax = []
++        for x in range(len(a)):
++            ay = []
++            for y in range(len(a[x])):
++                z = nx*px/nz + ny*py/nz + pz - nx*x/nz -ny*y/nz
++                z = int(z)
++                if z >= len(a[x][y]) or z < 0:
++                    break
++                ay.append(a[x][y][z])
++            ax.append(ay)
++        return ax
++    elif ny != 0:
++        ax = []
++        for x in range(len(a)):
++            ay = []
++            y = nx*px/ny - nx*x/ny + py
++            y = int(y)
++            if y >= len(a[x]) or y < 0:
++                break
++            for z in range(len(a[x][y])):
++                ay.append(a[x][y][z])
++            ax.append(ay)
++        return ax
++    else:
++        return a[px]
++$$$
+\ No newline at end of file
+diff --git a/executor/src/main/scala/raw/executor/spark/Executor.scala b/executor/src/main/scala/raw/executor/spark/Executor.scala
+index 30ffdd2..ec8160b 100644
+--- a/executor/src/main/scala/raw/executor/spark/Executor.scala
++++ b/executor/src/main/scala/raw/executor/spark/Executor.scala
+@@ -14,21 +14,25 @@ import raw.compiler.common.source._
+ import raw.compiler.core.source._
+ import raw.compiler.sql.source._
+ import raw.config.RawSettings
++import raw.executor.spark.inputformats.bids.BidsFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.csv.CsvFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.binary.ExcelFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.hjson.HJsonFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.iis.IISFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.json.JsonFormatCodeGenBuilder
++import raw.executor.spark.inputformats.nifti.NiftiFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.parquet.ParquetFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.text.TextFormatCodeGenBuilder
+ import raw.executor.spark.inputformats.xml.XmlFormatCodeGenBuilder
+ import raw.filesystems.hadoop.Hadoop
+ import raw.inputformats.InputFormatDescriptor
++import raw.inputformats.bids.BidsInputFormatDescriptor
+ import raw.inputformats.csv.CsvInputFormatDescriptor
+ import raw.inputformats.excel.ExcelInputFormatDescriptor
+ import raw.inputformats.hjson.HjsonInputFormatDescriptor
+ import raw.inputformats.iis.IISInputFormatDescriptor
+ import raw.inputformats.json.JsonInputFormatDescriptor
++import raw.inputformats.nifti.NiftiInputFormatDescriptor
+ import raw.inputformats.parquet.ParquetInputFormatDescriptor
+ import raw.inputformats.text.TextInputFormatDescriptor
+ import raw.inputformats.xml.XmlInputFormatDescriptor
+@@ -179,6 +183,8 @@ class ExpressionBuilder(val tree: Tree, val queryName: String, settings: RawSett
+       case ParquetInputFormatDescriptor() => ???
+       case XmlInputFormatDescriptor(_) => XmlFormatCodeGenBuilder.buildDropboxCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+       case ExcelInputFormatDescriptor(_, _, _) => ExcelFormatCodeGenBuilder.buildDropboxCode(format, projectedType, fullType, maybeColumns, maybePredicate)
++      case NiftiInputFormatDescriptor(_,_,_,_,_,_,_,_) => NiftiFormatCodeGenBuilder.buildDropboxCode(format, projectedType, fullType, maybeColumns, maybePredicate)
++      case BidsInputFormatDescriptor(_) => BidsFormatCodeGenBuilder.buildDropboxCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+     }
+   }
+ 
+@@ -192,6 +198,8 @@ class ExpressionBuilder(val tree: Tree, val queryName: String, settings: RawSett
+       case ParquetInputFormatDescriptor() => ParquetFormatCodeGenBuilder.buildHadoopCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+       case XmlInputFormatDescriptor(_) => XmlFormatCodeGenBuilder.buildHadoopCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+       case ExcelInputFormatDescriptor(_, _, _) => ExcelFormatCodeGenBuilder.buildHadoopCode(format, projectedType, fullType, maybeColumns, maybePredicate)
++      case NiftiInputFormatDescriptor(_,_,_,_,_,_,_,_) => NiftiFormatCodeGenBuilder.buildHadoopCode(format, projectedType, fullType, maybeColumns, maybePredicate)
++      case BidsInputFormatDescriptor(_) => BidsFormatCodeGenBuilder.buildHadoopCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+     }
+   }
+ 
+@@ -205,6 +213,8 @@ class ExpressionBuilder(val tree: Tree, val queryName: String, settings: RawSett
+       case ParquetInputFormatDescriptor() => ???
+       case XmlInputFormatDescriptor(_) => XmlFormatCodeGenBuilder.buildHttpCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+       case ExcelInputFormatDescriptor(_, _, _) => ExcelFormatCodeGenBuilder.buildHttpCode(format, projectedType, fullType, maybeColumns, maybePredicate)
++      case NiftiInputFormatDescriptor(_,_,_,_,_,_,_,_) => NiftiFormatCodeGenBuilder.buildHttpCode(format, projectedType, fullType, maybeColumns, maybePredicate)
++      case BidsInputFormatDescriptor(_) => BidsFormatCodeGenBuilder.buildHttpCode(format, projectedType, fullType, maybeColumns, maybePredicate)
+     }
+   }
+ 
+@@ -687,7 +697,21 @@ class ExpressionBuilder(val tree: Tree, val queryName: String, settings: RawSett
+       case RecordProj(e1, idn) =>
+         // Since the 'idn' being projected may be from a source case class we generated, we must take care to
+         // apply the same idn conventions.
+-        s"${build(e1)}.${AttrIdnBuilder(idn)}"
++
++        //Special treatment for BIDS data so that selection is pushed down below record construction.
++        var bidsParserClassName : String = ""
++        for (i <- 0 until codeGenContext.classes.size) {
++          if (codeGenContext.classes(i).className.startsWith("BidsParser")) {
++            bidsParserClassName = codeGenContext.classes(i).className
++          }
++        }
++
++        if ( bidsParserClassName!= "" && AttrIdnBuilder(idn).toString() == "data")
++          s"Seq(new ${bidsParserClassName}().getFormattedData ( ${build(e1)}.nifti_file ))"
++        else
++          s"${build(e1)}.${AttrIdnBuilder(idn)}"
++
++
+       case e@RecordCons(atts) =>
+         val t = tree.tipe(e).asInstanceOf[RecordType]
+         val classType = TypesBuilder(t)
+diff --git a/executor/src/main/scala/raw/inferrer/Inferrer.scala b/executor/src/main/scala/raw/inferrer/Inferrer.scala
+index 33f7563..9af1427 100644
+--- a/executor/src/main/scala/raw/inferrer/Inferrer.scala
++++ b/executor/src/main/scala/raw/inferrer/Inferrer.scala
+@@ -12,21 +12,25 @@ import raw.compiler.L4.source.{Scan, SourcePrettyPrinter}
+ import raw.compiler.base.source._
+ import raw.compiler.sql.source.{SqlCollectionType, SqlRecordType}
+ import raw.config.RawSettings
++import raw.inferrer.bids.BidsInferrer
+ import raw.inferrer.csv.CsvInferrer
+ import raw.inferrer.excel.ExcelInferrer
+ import raw.inferrer.hjson.HjsonInferrer
+ import raw.inferrer.iis.IISInferrer
+ import raw.inferrer.json.JsonInferrer
++import raw.inferrer.nifti.NiftiInferrer
+ import raw.inferrer.parquet.ParquetInferrer
+ import raw.inferrer.rdbms.RDBMSInferrer
+ import raw.inferrer.text.TextInferrer
+ import raw.inferrer.xml.XmlInferrer
+ import raw.inputformats._
++import raw.inputformats.bids.BidsInputFormatHint
+ import raw.inputformats.csv.{CsvInputFormatDescriptor, CsvInputFormatHint}
+ import raw.inputformats.excel.ExcelInputFormatHint
+ import raw.inputformats.hjson.HjsonInputFormatHint
+ import raw.inputformats.iis.IISInputFormatHint
+ import raw.inputformats.json.JsonInputFormatHint
++import raw.inputformats.nifti.NiftiInputFormatHint
+ import raw.inputformats.parquet.ParquetInputFormatHint
+ import raw.inputformats.text.{TextInputFormatDescriptor, TextInputFormatHint}
+ import raw.inputformats.xml.XmlInputFormatHint
+@@ -110,12 +114,22 @@ object Inferrer extends StrictLogging {
+                     val (tipe, format) = XmlInferrer.infer(is, enc, dfh)(settings)
+                     is.close()
+                     Right(Scan(tipe, location, format))
++                  case Some(dfh@NiftiInputFormatHint(_, _, _, _, _, _)) =>
++                    val is = locationManager.getInputStream(location)
++                    //nifti1 header is 348 bytes
++                    val (tipe, format) = NiftiInferrer.infer(getByteSample(is, 348))
++                    Right(Scan(tipe, location, format))
+                   case Some(dfh@ParquetInputFormatHint()) =>
+                     val (tipe, format) = ParquetInferrer.infer(client, settings, location)
+                     Right(Scan(tipe, location, format))
+                   case Some(hint@ExcelInputFormatHint(sheet, hasHeader, at)) =>
+                     val (tipe, format) = ExcelInferrer.infer(locationManager.getInputStream(location), sheet, hasHeader, at)
+                     Right(Scan(tipe, location, format))
++                  case Some(dfh@BidsInputFormatHint(encoding)) =>
++                    val (is, enc) = getIsAndEncoding(encoding)
++                    val (tipe, format) = BidsInferrer.infer(getByteSample(is, 348), enc, location, dfh)
++                    is.close()
++                    Right(Scan(tipe, location, format))
+                   case Some(dfh) =>
+                     throw new PublicException("Unknown format", Some(dfh.toString))
+                   case None =>
+@@ -129,18 +143,27 @@ object Inferrer extends StrictLogging {
+                     if (files.length == 1 && Seq(".xls", ".xlsx").exists(files.head.location.rawUri.endsWith)) {
+                       val (tipe, format) = ExcelInferrer.infer(locationManager.getInputStream(location), None, None, None)
+                       Right(Scan(tipe, location, format))
++                    } else if (files.length == 1 && Seq(".nii", ".nii.gz").exists(files.head.location.rawUri.endsWith)) {
++                      val is = locationManager.getInputStream(location)
++                      val (tipe, format) = NiftiInferrer.infer(getByteSample(is, 348))
++                      Right(Scan(tipe, location, format))
+                     } else if (files.head.location.rawUri.endsWith(".parquet")) {
+                       val (tipe, format) = ParquetInferrer.infer(client, settings, location)
+                       Right(Scan(tipe, location, format))
+                     } else {
+                       val (is, encoding) = getIsAndEncoding(None)
++
+                       // This will just reset the inputstream before inferring
+                       def tryInfer(f: => (Type, InputFormatDescriptor)): Try[(Type, InputFormatDescriptor)] = {
+-                        Try({ is.reset(); f})
++                        Try({
++                          is.reset();
++                          f
++                        })
+                       }
+ 
+                       val autoInferrer =
+-                        tryInfer(JsonInferrer.infer(is, encoding, JsonInputFormatHint())(settings))
++                        tryInfer(BidsInferrer.infer(getByteSample(is, 348), encoding, location, BidsInputFormatHint()))
++                          .orElse(tryInfer(JsonInferrer.infer(is, encoding, JsonInputFormatHint())(settings)))
+                           .orElse(tryInfer(HjsonInferrer.infer(is, encoding, HjsonInputFormatHint())(settings)))
+                           .orElse(tryInfer(IISInferrer.infer(is, encoding, IISInputFormatHint())(settings)))
+                           .orElse(tryInfer(XmlInferrer.infer(is, encoding, XmlInputFormatHint())(settings)))
